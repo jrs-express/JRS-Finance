@@ -1,0 +1,20 @@
+@page "/master/parties"
+@attribute [Authorize(Roles = "Admin,AccountingAdmin,Accounting")]
+@inject JrsExpressAccounting.Web.Data.ApplicationDbContext Db
+
+<h3>Customers and Vendors (BIR Fields)</h3>
+<table class="table table-sm table-striped">
+    <thead><tr><th>Type</th><th>Name</th><th>TIN</th><th>Address</th><th>VAT Type</th></tr></thead>
+    <tbody>
+        @foreach (var item in items)
+        {
+            <tr><td>@item.PartyType</td><td>@item.Name</td><td>@item.Tin</td><td>@item.RegisteredAddress</td><td>@item.VatType</td></tr>
+        }
+    </tbody>
+</table>
+
+@code {
+    private List<BusinessParty> items = [];
+    protected override async Task OnInitializedAsync() =>
+        items = await Db.BusinessParties.OrderBy(x => x.PartyType).ThenBy(x => x.Name).ToListAsync();
+}

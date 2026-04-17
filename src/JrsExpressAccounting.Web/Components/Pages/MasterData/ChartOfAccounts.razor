@@ -1,0 +1,20 @@
+@page "/master/chart-of-accounts"
+@attribute [Authorize(Roles = "Admin,AccountingAdmin,Accounting")]
+@inject JrsExpressAccounting.Web.Data.ApplicationDbContext Db
+
+<h3>Chart of Accounts with Sub Accounts</h3>
+<table class="table table-sm table-striped">
+    <thead><tr><th>Code</th><th>Name</th><th>Type</th><th>Parent</th></tr></thead>
+    <tbody>
+        @foreach (var item in items)
+        {
+            <tr><td>@item.AccountCode</td><td>@item.AccountName</td><td>@item.AccountType</td><td>@item.ParentAccount?.AccountName</td></tr>
+        }
+    </tbody>
+</table>
+
+@code {
+    private List<ChartOfAccount> items = [];
+    protected override async Task OnInitializedAsync() =>
+        items = await Db.ChartOfAccounts.Include(x => x.ParentAccount).OrderBy(x => x.AccountCode).ToListAsync();
+}

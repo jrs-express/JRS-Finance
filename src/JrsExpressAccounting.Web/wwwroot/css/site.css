@@ -1,0 +1,48 @@
+:root {
+  --jrs-red: #e31f26;
+  --jrs-dark: #2f2f2f;
+}
+
+html, body {
+  font-family: "Segoe UI", sans-serif;
+  margin: 0;
+}
+
+.page {
+  display: flex;
+  min-height: 100vh;
+}
+
+.sidebar {
+  width: 280px;
+  background: linear-gradient(180deg, var(--jrs-red), #9c0f13);
+}
+
+.top-row {
+  background-color: #fff5f5;
+  border-bottom: 1px solid #f0d8d8;
+  height: 60px;
+  display: flex;
+  align-items: center;
+}
+
+.content { background: #fafafa; min-height: calc(100vh - 60px); }
+
+.nav-link {
+  color: #fff;
+  display: block;
+  padding: .25rem .5rem;
+  border-radius: 4px;
+  text-decoration: none;
+}
+
+.nav-link.active, .nav-link:hover { background: rgba(255,255,255,.2); }
+
+.menu-header {
+  margin-top: .9rem;
+  font-size: .75rem;
+  text-transform: uppercase;
+  opacity: .8;
+}
+
+.dashboard-card { border-left: 5px solid var(--jrs-red); }

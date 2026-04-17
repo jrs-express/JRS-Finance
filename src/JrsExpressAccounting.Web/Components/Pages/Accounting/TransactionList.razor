@@ -1,0 +1,23 @@
+@inject JrsExpressAccounting.Web.Data.ApplicationDbContext Db
+
+<table class="table table-sm table-striped">
+    <thead><tr><th>Date</th><th>Type</th><th>Bank</th><th>Amount</th><th>Remarks</th></tr></thead>
+    <tbody>
+        @foreach (var tx in transactions)
+        {
+            <tr><td>@tx.Date.ToShortDateString()</td><td>@tx.Type</td><td>@tx.Bank?.BankName</td><td>@tx.Amount.ToString("N2")</td><td>@tx.Remarks</td></tr>
+        }
+    </tbody>
+</table>
+
+@code {
+    [Parameter] public string FilterType { get; set; } = string.Empty;
+
+    private List<CashTransaction> transactions = [];
+
+    protected override async Task OnParametersSetAsync() =>
+        transactions = await Db.CashTransactions.Include(x => x.Bank)
+            .Where(x => x.Type == FilterType)
+            .OrderByDescending(x => x.Date)
+            .ToListAsync();
+}

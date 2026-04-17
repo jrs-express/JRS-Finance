@@ -1,0 +1,27 @@
+@page "/reports/cas"
+@attribute [Authorize(Roles = "Admin,AccountingAdmin,Accounting")]
+@inject IReportService Reports
+
+<h3>BIR CAS Required Reports</h3>
+<ul>
+    <li>General Ledger with VAT/Withholding tax columns</li>
+    <li>Journal Book summary</li>
+    <li>Cash receipts/disbursement book</li>
+    <li>Schedule of taxes and remittances</li>
+</ul>
+
+<table class="table table-sm table-striped">
+    <thead><tr><th>Report Group</th><th>Description</th><th>Count</th></tr></thead>
+    <tbody>
+        @foreach (var item in lines)
+        {
+            <tr><td>@item.ReportName</td><td>@item.Description</td><td>@item.Count</td></tr>
+        }
+    </tbody>
+</table>
+
+@code {
+    private List<BirCasReportLine> lines = [];
+    protected override async Task OnInitializedAsync() =>
+        lines = await Reports.GetBirCasSummaryAsync(DateTime.UtcNow.AddMonths(-1), DateTime.UtcNow, null);
+}

@@ -1,0 +1,41 @@
+@page "/master/branches"
+@attribute [Authorize(Roles = "Admin,AccountingAdmin,Accounting")]
+@inject JrsExpressAccounting.Web.Data.ApplicationDbContext Db
+
+<h3>Branches</h3>
+<input class="form-control mb-2" @bind="search" placeholder="Filter by code or name" />
+<table class="table table-sm table-striped">
+    <thead><tr><th @onclick="() => SortBy(nameof(Branch.Code))">Code</th><th>Name</th><th>Address</th><th>TIN</th></tr></thead>
+    <tbody>
+        @foreach (var item in items)
+        {
+            <tr><td>@item.Code</td><td>@item.Name</td><td>@item.Address</td><td>@item.Tin</td></tr>
+        }
+    </tbody>
+</table>
+<button class="btn btn-sm btn-outline-secondary" @onclick="Prev" disabled="@(page==1)">Prev</button>
+<span class="mx-2">Page @page</span>
+<button class="btn btn-sm btn-outline-secondary" @onclick="Next">Next</button>
+
+@code {
+    private List<Branch> items = [];
+    private int page = 1;
+    private const int pageSize = 20;
+    private string search = string.Empty;
+    private bool sortAsc = true;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+    protected override async Task OnParametersSetAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        var query = Db.Branches.AsQueryable();
+        if (!string.IsNullOrWhiteSpace(search)) query = query.Where(x => x.Code.Contains(search) || x.Name.Contains(search));
+        query = sortAsc ? query.OrderBy(x => x.Code) : query.OrderByDescending(x => x.Code);
+        items = await query.Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
+    }
+
+    private async Task Prev() { page--; await LoadAsync(); }
+    private async Task Next() { page++; await LoadAsync(); }
+    private async Task SortBy(string _) { sortAsc = !sortAsc; await LoadAsync(); }
+}

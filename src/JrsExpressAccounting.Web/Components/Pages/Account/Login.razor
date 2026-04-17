@@ -1,0 +1,38 @@
+@page "/account/login"
+@inject SignInManager<ApplicationUser> SignInManager
+@inject NavigationManager Navigation
+
+<h3>Login</h3>
+<EditForm Model="model" OnValidSubmit="HandleLogin">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+    <div class="mb-2">
+        <label>Email</label>
+        <InputText class="form-control" @bind-Value="model.Email" />
+    </div>
+    <div class="mb-2">
+        <label>Password</label>
+        <InputText class="form-control" type="password" @bind-Value="model.Password" />
+    </div>
+    <button class="btn btn-danger">Login</button>
+</EditForm>
+<p class="mt-2 text-muted">Seed users: admin@jrs.local / Admin@12345 and accounting@jrs.local / Accounting@12345</p>
+
+@code {
+    private LoginModel model = new();
+
+    private async Task HandleLogin()
+    {
+        var result = await SignInManager.PasswordSignInAsync(model.Email, model.Password, true, lockoutOnFailure: false);
+        if (result.Succeeded)
+        {
+            Navigation.NavigateTo("/");
+        }
+    }
+
+    public class LoginModel
+    {
+        [Required, EmailAddress] public string Email { get; set; } = string.Empty;
+        [Required] public string Password { get; set; } = string.Empty;
+    }
+}

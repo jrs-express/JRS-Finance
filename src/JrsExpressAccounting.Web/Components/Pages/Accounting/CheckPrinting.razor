@@ -1,0 +1,19 @@
+@page "/accounting/check-printing"
+@attribute [Authorize(Roles = "Admin,AccountingAdmin,Accounting")]
+@inject JrsExpressAccounting.Web.Data.ApplicationDbContext Db
+
+<h3>Check Printing Register</h3>
+<table class="table table-sm table-striped">
+    <thead><tr><th>Check #</th><th>Date</th><th>Payee</th><th>Amount</th><th>Status</th></tr></thead>
+    <tbody>
+        @foreach (var c in checks)
+        {
+            <tr><td>@c.CheckNumber</td><td>@c.CheckDate.ToShortDateString()</td><td>@c.Payee</td><td>@c.Amount.ToString("N2")</td><td>@c.Status</td></tr>
+        }
+    </tbody>
+</table>
+
+@code {
+    private List<CheckPayment> checks = [];
+    protected override async Task OnInitializedAsync() => checks = await Db.CheckPayments.OrderByDescending(x => x.CheckDate).ToListAsync();
+}

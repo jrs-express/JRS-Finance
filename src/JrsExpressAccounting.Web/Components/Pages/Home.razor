@@ -1,0 +1,28 @@
+@page "/"
+@attribute [Authorize(Roles = "Admin,AccountingAdmin,Accounting")]
+@inject JrsExpressAccounting.Web.Data.ApplicationDbContext Db
+
+<PageTitle>Dashboard</PageTitle>
+
+<h3>Dashboard</h3>
+<div class="row g-3">
+    <div class="col-md-3"><div class="card dashboard-card"><div class="card-body"><h6>Branches</h6><h4>@branchCount</h4></div></div></div>
+    <div class="col-md-3"><div class="card dashboard-card"><div class="card-body"><h6>Customers/Vendors</h6><h4>@partyCount</h4></div></div></div>
+    <div class="col-md-3"><div class="card dashboard-card"><div class="card-body"><h6>Journal Entries</h6><h4>@journalCount</h4></div></div></div>
+    <div class="col-md-3"><div class="card dashboard-card"><div class="card-body"><h6>Check Prints</h6><h4>@checkCount</h4></div></div></div>
+</div>
+
+@code {
+    private int branchCount;
+    private int partyCount;
+    private int journalCount;
+    private int checkCount;
+
+    protected override async Task OnInitializedAsync()
+    {
+        branchCount = await Db.Branches.CountAsync();
+        partyCount = await Db.BusinessParties.CountAsync();
+        journalCount = await Db.JournalEntries.CountAsync();
+        checkCount = await Db.CheckPayments.CountAsync();
+    }
+}
