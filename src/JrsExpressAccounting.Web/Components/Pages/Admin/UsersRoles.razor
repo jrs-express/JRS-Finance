@@ -10,12 +10,30 @@
     <tbody>
         @foreach (var user in users)
         {
-            <tr><td>@user.Email</td><td>@user.FullName</td><td>@string.Join(", ", await UserManager.GetRolesAsync(user))</td></tr>
+            <tr>
+                <td>@user.Email</td>
+                <td>@user.FullName</td>
+                <td>@GetUserRoles(user.Id)</td>
+            </tr>
         }
     </tbody>
 </table>
 
 @code {
     private List<ApplicationUser> users = [];
-    protected override void OnInitialized() => users = UserManager.Users.OrderBy(x => x.Email).ToList();
+    private readonly Dictionary<string, string> userRoles = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        users = UserManager.Users.OrderBy(x => x.Email).ToList();
+
+        foreach (var user in users)
+        {
+            var roles = await UserManager.GetRolesAsync(user);
+            userRoles[user.Id] = string.Join(", ", roles);
+        }
+    }
+
+    private string GetUserRoles(string userId)
+        => userRoles.TryGetValue(userId, out var roles) ? roles : string.Empty;
 }
