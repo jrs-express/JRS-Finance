@@ -98,6 +98,15 @@ public class SeedData(IServiceProvider services)
 
     private static async Task EnsureSchemaAsync(ApplicationDbContext db)
     {
+        // First-run experience: if the database does not exist yet, attempting to
+        // open a connection for INFORMATION_SCHEMA checks will throw
+        // "Cannot open database ... requested by the login".
+        if (!await db.Database.CanConnectAsync())
+        {
+            await db.Database.EnsureCreatedAsync();
+            return;
+        }
+
         // This starter template ships with an intentionally empty first migration.
         // In that state, Migrate() can create only __EFMigrationsHistory, which then
         // blocks EnsureCreated() and causes runtime errors such as missing AspNetRoles.
