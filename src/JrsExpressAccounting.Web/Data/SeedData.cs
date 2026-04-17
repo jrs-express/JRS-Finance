@@ -104,16 +104,26 @@ public class SeedData(IServiceProvider services)
 
     private void EnsureConnectionString(ApplicationDbContext db)
     {
-        if (!string.IsNullOrWhiteSpace(db.Database.GetConnectionString()))
-        {
-            return;
-        }
-
+        var dbConnection = db.Database.GetDbConnection();
+        var currentConnectionString = db.Database.GetConnectionString();
         var configuration = services.GetRequiredService<IConfiguration>();
         var configuredConnectionString = configuration.GetConnectionString("DefaultConnection");
-        db.Database.SetConnectionString(string.IsNullOrWhiteSpace(configuredConnectionString)
+        var resolvedConnectionString = string.IsNullOrWhiteSpace(configuredConnectionString)
             ? FallbackConnectionString
-            : configuredConnectionString);
+            : configuredConnectionString;
+
+        if (string.IsNullOrWhiteSpace(currentConnectionString))
+        {
+            db.Database.SetConnectionString(resolvedConnectionString);
+        }
+
+        // Some SQL client paths read directly from the underlying DbConnection
+        // instance. Keep it in sync with EF Core's relational options to avoid
+        // "The ConnectionString property has not been initialized." at runtime.
+        if (string.IsNullOrWhiteSpace(dbConnection.ConnectionString))
+        {
+            dbConnection.ConnectionString = resolvedConnectionString;
+        }
     }
 
     private static async Task EnsureSchemaAsync(ApplicationDbContext db)
