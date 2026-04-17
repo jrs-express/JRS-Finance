@@ -1,33 +1,38 @@
 using JrsExpressAccounting.Web.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Data.SqlClient;
-using Microsoft.Extensions.Configuration;
 
 namespace JrsExpressAccounting.Web.Data;
 
 public class SeedData(IServiceProvider services)
 {
-    private const string FallbackConnectionString = "Server=(localdb)\\mssqllocaldb;Database=JrsExpressAccounting;Trusted_Connection=True;MultipleActiveResultSets=true;TrustServerCertificate=True;";
-
     public async Task SeedAsync()
     {
         var db = services.GetRequiredService<ApplicationDbContext>();
         var userManager = services.GetRequiredService<UserManager<ApplicationUser>>();
         var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
 
-        EnsureConnectionString(db);
+        await SeedRolesAsync(roleManager);
+        await SeedMasterDataAsync(db);
+        await SeedUsersAsync(userManager);
+    }
 
-        await EnsureSchemaAsync(db);
-
+    private static async Task SeedRolesAsync(RoleManager<IdentityRole> roleManager)
+    {
         foreach (var role in new[] { "Admin", "AccountingAdmin", "Accounting" })
         {
-            if (!await roleManager.RoleExistsAsync(role))
+            if (await roleManager.RoleExistsAsync(role))
             {
-                await roleManager.CreateAsync(new IdentityRole(role));
+                continue;
             }
-        }
 
+            var createResult = await roleManager.CreateAsync(new IdentityRole(role));
+            EnsureSuccess(createResult, $"creating role '{role}'");
+        }
+    }
+
+    private static async Task SeedMasterDataAsync(ApplicationDbContext db)
+    {
         if (!await db.Branches.AnyAsync())
         {
             db.Branches.AddRange(
@@ -67,107 +72,64 @@ public class SeedData(IServiceProvider services)
         }
 
         await db.SaveChangesAsync();
+    }
 
-        var adminEmail = "admin@jrs.local";
-        var admin = await userManager.FindByEmailAsync(adminEmail);
-        if (admin is null)
+    private static async Task SeedUsersAsync(UserManager<ApplicationUser> userManager)
+    {
+        await EnsureUserAsync(
+            userManager,
+            email: "admin@jrs.local",
+            fullName: "System Admin",
+            password: "Admin@12345",
+            roles: ["Admin", "AccountingAdmin"]);
+
+        await EnsureUserAsync(
+            userManager,
+            email: "accounting@jrs.local",
+            fullName: "Accounting User",
+            password: "Accounting@12345",
+            roles: ["Accounting"]);
+    }
+
+    private static async Task EnsureUserAsync(
+        UserManager<ApplicationUser> userManager,
+        string email,
+        string fullName,
+        string password,
+        string[] roles)
+    {
+        var user = await userManager.FindByEmailAsync(email);
+
+        if (user is null)
         {
-            admin = new ApplicationUser
+            user = new ApplicationUser
             {
-                UserName = adminEmail,
-                Email = adminEmail,
-                FullName = "System Admin",
+                UserName = email,
+                Email = email,
+                FullName = fullName,
                 EmailConfirmed = true
             };
 
-            await userManager.CreateAsync(admin, "Admin@12345");
-            await userManager.AddToRolesAsync(admin, ["Admin", "AccountingAdmin"]);
+            var createResult = await userManager.CreateAsync(user, password);
+            EnsureSuccess(createResult, $"creating user '{email}'");
         }
 
-        var accountingEmail = "accounting@jrs.local";
-        var accounting = await userManager.FindByEmailAsync(accountingEmail);
-        if (accounting is null)
+        var missingRoles = roles.Except(await userManager.GetRolesAsync(user)).ToArray();
+        if (missingRoles.Length > 0)
         {
-            accounting = new ApplicationUser
-            {
-                UserName = accountingEmail,
-                Email = accountingEmail,
-                FullName = "Accounting User",
-                EmailConfirmed = true
-            };
-
-            await userManager.CreateAsync(accounting, "Accounting@12345");
-            await userManager.AddToRoleAsync(accounting, "Accounting");
+            var addRoleResult = await userManager.AddToRolesAsync(user, missingRoles);
+            EnsureSuccess(addRoleResult, $"assigning roles to '{email}'");
         }
     }
 
-
-    private void EnsureConnectionString(ApplicationDbContext db)
+    private static void EnsureSuccess(IdentityResult result, string operation)
     {
-        var dbConnection = db.Database.GetDbConnection();
-        var currentConnectionString = db.Database.GetConnectionString();
-        var configuration = services.GetRequiredService<IConfiguration>();
-        var configuredConnectionString = configuration.GetConnectionString("DefaultConnection");
-        var resolvedConnectionString = string.IsNullOrWhiteSpace(configuredConnectionString)
-            ? FallbackConnectionString
-            : configuredConnectionString;
-
-        if (string.IsNullOrWhiteSpace(currentConnectionString))
+        if (result.Succeeded)
         {
-            db.Database.SetConnectionString(resolvedConnectionString);
-        }
-
-        // Some SQL client paths read directly from the underlying DbConnection
-        // instance. Keep it in sync with EF Core's relational options to avoid
-        // "The ConnectionString property has not been initialized." at runtime.
-        if (string.IsNullOrWhiteSpace(dbConnection.ConnectionString))
-        {
-            dbConnection.ConnectionString = resolvedConnectionString;
-        }
-    }
-
-    private static async Task EnsureSchemaAsync(ApplicationDbContext db)
-    {
-        // First-run experience: if the database does not exist yet, attempting to
-        // open a connection for INFORMATION_SCHEMA checks will throw
-        // "Cannot open database ... requested by the login".
-        if (!await db.Database.CanConnectAsync())
-        {
-            await db.Database.EnsureCreatedAsync();
             return;
         }
 
-        // This starter template ships with an intentionally empty first migration.
-        // In that state, Migrate() can create only __EFMigrationsHistory, which then
-        // blocks EnsureCreated() and causes runtime errors such as missing AspNetRoles.
-        var roleTableExists = await TableExistsAsync(db, "AspNetRoles");
-
-        if (!roleTableExists)
-        {
-            await db.Database.EnsureDeletedAsync();
-            await db.Database.EnsureCreatedAsync();
-            return;
-        }
-
-        await db.Database.EnsureCreatedAsync();
-    }
-
-    private static async Task<bool> TableExistsAsync(ApplicationDbContext db, string tableName)
-    {
-        await using var conn = db.Database.GetDbConnection();
-        if (conn.State != System.Data.ConnectionState.Open)
-        {
-            await conn.OpenAsync();
-        }
-
-        await using var cmd = conn.CreateCommand();
-        cmd.CommandText = """
-            SELECT 1
-            FROM INFORMATION_SCHEMA.TABLES
-            WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = @tableName
-            """;
-        cmd.Parameters.Add(new SqlParameter("@tableName", tableName));
-        var result = await cmd.ExecuteScalarAsync();
-        return result is not null and not DBNull;
+        var errors = string.Join("; ", result.Errors.Select(x => x.Description));
+        throw new InvalidOperationException($"Error while {operation}: {errors}");
     }
 }

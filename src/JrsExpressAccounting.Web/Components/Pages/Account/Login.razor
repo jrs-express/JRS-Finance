@@ -4,6 +4,8 @@
 @inject UserManager<ApplicationUser> UserManager
 @inject NavigationManager Navigation
 
+<PageTitle>Login - JRS Express</PageTitle>
+
 <div class="login-card">
     <div class="login-card-header">
         <h3 class="mb-1">Welcome to JRS Express</h3>
@@ -13,19 +15,19 @@
     <EditForm Model="model" OnValidSubmit="HandleLogin" FormName="login" class="login-form">
         <DataAnnotationsValidator />
         <ValidationSummary class="text-danger small mb-3" />
-        @if (!string.IsNullOrEmpty(errorMessage))
+        @if (!string.IsNullOrWhiteSpace(errorMessage))
         {
             <div class="alert alert-danger py-2" role="alert">@errorMessage</div>
         }
 
         <div class="mb-3">
-            <label class="form-label" for="email">Email</label>
-            <InputText id="email" name="Email" class="form-control form-control-lg" @bind-Value="model.Email" placeholder="name@jrs.local" />
+            <label class="form-label">Email</label>
+            <InputText class="form-control form-control-lg" @bind-Value="model.Email" placeholder="name@jrs.local" autocomplete="username" />
         </div>
 
         <div class="mb-3">
-            <label class="form-label" for="password">Password</label>
-            <InputText id="password" name="Password" class="form-control form-control-lg" type="password" @bind-Value="model.Password" placeholder="Enter password" />
+            <label class="form-label">Password</label>
+            <InputText class="form-control form-control-lg" type="password" @bind-Value="model.Password" placeholder="Enter password" autocomplete="current-password" />
         </div>
 
         <button type="submit" class="btn btn-jrs w-100">Login</button>
@@ -37,35 +39,40 @@
 </div>
 
 @code {
-    [SupplyParameterFromForm(FormName = "login")]
-    private LoginModel model { get; set; } = new();
+    [SupplyParameterFromQuery(Name = "returnUrl")]
+    public string? ReturnUrl { get; set; }
 
+    private readonly LoginModel model = new();
     private string? errorMessage;
 
     private async Task HandleLogin()
     {
         errorMessage = null;
 
-        var user = await UserManager.FindByEmailAsync(model.Email);
+        var user = await UserManager.FindByEmailAsync(model.Email.Trim());
         if (user is null)
         {
             errorMessage = "Invalid email or password.";
             return;
         }
 
-        var result = await SignInManager.PasswordSignInAsync(user.UserName!, model.Password, true, lockoutOnFailure: false);
-        if (result.Succeeded)
+        var result = await SignInManager.PasswordSignInAsync(user, model.Password, isPersistent: true, lockoutOnFailure: false);
+        if (!result.Succeeded)
         {
-            Navigation.NavigateTo("/", forceLoad: true);
+            errorMessage = "Invalid email or password.";
             return;
         }
 
-        errorMessage = "Invalid email or password.";
+        var destination = string.IsNullOrWhiteSpace(ReturnUrl) ? "/" : ReturnUrl;
+        Navigation.NavigateTo(destination, forceLoad: true);
     }
 
     private class LoginModel
     {
-        [Required, EmailAddress] public string Email { get; set; } = string.Empty;
-        [Required] public string Password { get; set; } = string.Empty;
+        [Required, EmailAddress]
+        public string Email { get; set; } = string.Empty;
+
+        [Required]
+        public string Password { get; set; } = string.Empty;
     }
 }
