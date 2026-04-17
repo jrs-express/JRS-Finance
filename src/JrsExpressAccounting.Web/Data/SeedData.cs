@@ -1,6 +1,7 @@
 using JrsExpressAccounting.Web.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Data.SqlClient;
 
 namespace JrsExpressAccounting.Web.Data;
 
@@ -12,7 +13,7 @@ public class SeedData(IServiceProvider services)
         var userManager = services.GetRequiredService<UserManager<ApplicationUser>>();
         var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
 
-        await db.Database.MigrateAsync();
+        await EnsureSchemaAsync(db);
 
         foreach (var role in new[] { "Admin", "AccountingAdmin", "Accounting" })
         {
@@ -93,5 +94,41 @@ public class SeedData(IServiceProvider services)
             await userManager.CreateAsync(accounting, "Accounting@12345");
             await userManager.AddToRoleAsync(accounting, "Accounting");
         }
+    }
+
+    private static async Task EnsureSchemaAsync(ApplicationDbContext db)
+    {
+        // This starter template ships with an intentionally empty first migration.
+        // In that state, Migrate() can create only __EFMigrationsHistory, which then
+        // blocks EnsureCreated() and causes runtime errors such as missing AspNetRoles.
+        var roleTableExists = await TableExistsAsync(db, "AspNetRoles");
+
+        if (!roleTableExists)
+        {
+            await db.Database.EnsureDeletedAsync();
+            await db.Database.EnsureCreatedAsync();
+            return;
+        }
+
+        await db.Database.EnsureCreatedAsync();
+    }
+
+    private static async Task<bool> TableExistsAsync(ApplicationDbContext db, string tableName)
+    {
+        await using var conn = db.Database.GetDbConnection();
+        if (conn.State != System.Data.ConnectionState.Open)
+        {
+            await conn.OpenAsync();
+        }
+
+        await using var cmd = conn.CreateCommand();
+        cmd.CommandText = """
+            SELECT 1
+            FROM INFORMATION_SCHEMA.TABLES
+            WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = @tableName
+            """;
+        cmd.Parameters.Add(new SqlParameter("@tableName", tableName));
+        var result = await cmd.ExecuteScalarAsync();
+        return result is not null and not DBNull;
     }
 }
