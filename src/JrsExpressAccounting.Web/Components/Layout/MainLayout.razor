@@ -1,16 +1,19 @@
 @inherits LayoutComponentBase
 
-<div class="page">
-    <div class="sidebar">
+<div class="page app-shell">
+    <aside class="sidebar">
         <NavMenu />
-    </div>
+    </aside>
 
-    <main>
+    <main class="main-content">
         <div class="top-row px-4">
-            <h5>JRS Express Accounting System</h5>
+            <div>
+                <h5 class="mb-0">JRS Express Accounting System</h5>
+                <small class="text-muted">Finance and BIR CAS Operations</small>
+            </div>
         </div>
 
-        <article class="content px-4 py-2">
+        <article class="content px-4 py-4">
             @Body
         </article>
     </main>
