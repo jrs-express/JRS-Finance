@@ -2,16 +2,21 @@ using JrsExpressAccounting.Web.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Configuration;
 
 namespace JrsExpressAccounting.Web.Data;
 
 public class SeedData(IServiceProvider services)
 {
+    private const string FallbackConnectionString = "Server=(localdb)\\mssqllocaldb;Database=JrsExpressAccounting;Trusted_Connection=True;MultipleActiveResultSets=true;TrustServerCertificate=True;";
+
     public async Task SeedAsync()
     {
         var db = services.GetRequiredService<ApplicationDbContext>();
         var userManager = services.GetRequiredService<UserManager<ApplicationUser>>();
         var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
+
+        EnsureConnectionString(db);
 
         await EnsureSchemaAsync(db);
 
@@ -94,6 +99,21 @@ public class SeedData(IServiceProvider services)
             await userManager.CreateAsync(accounting, "Accounting@12345");
             await userManager.AddToRoleAsync(accounting, "Accounting");
         }
+    }
+
+
+    private void EnsureConnectionString(ApplicationDbContext db)
+    {
+        if (!string.IsNullOrWhiteSpace(db.Database.GetConnectionString()))
+        {
+            return;
+        }
+
+        var configuration = services.GetRequiredService<IConfiguration>();
+        var configuredConnectionString = configuration.GetConnectionString("DefaultConnection");
+        db.Database.SetConnectionString(string.IsNullOrWhiteSpace(configuredConnectionString)
+            ? FallbackConnectionString
+            : configuredConnectionString);
     }
 
     private static async Task EnsureSchemaAsync(ApplicationDbContext db)
