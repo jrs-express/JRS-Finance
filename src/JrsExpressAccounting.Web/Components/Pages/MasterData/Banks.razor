@@ -1,0 +1,20 @@
+@page "/master/banks"
+@attribute [Authorize(Roles = "Admin,AccountingAdmin,Accounting")]
+@inject JrsExpressAccounting.Web.Data.ApplicationDbContext Db
+
+<h3>Banks (Mapped to COA)</h3>
+<table class="table table-sm table-striped">
+    <thead><tr><th>Bank</th><th>Account Number</th><th>COA</th></tr></thead>
+    <tbody>
+        @foreach (var item in items)
+        {
+            <tr><td>@item.BankName</td><td>@item.AccountNumber</td><td>@item.ChartOfAccount?.AccountCode - @item.ChartOfAccount?.AccountName</td></tr>
+        }
+    </tbody>
+</table>
+
+@code {
+    private List<Bank> items = [];
+    protected override async Task OnInitializedAsync() =>
+        items = await Db.Banks.Include(x => x.ChartOfAccount).OrderBy(x => x.BankName).ToListAsync();
+}

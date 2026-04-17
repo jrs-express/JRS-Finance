@@ -1,0 +1,6 @@
+@page "/accounting/expenses-withdrawals"
+@attribute [Authorize(Roles = "Admin,AccountingAdmin,Accounting")]
+
+<h3>Expenses and Bank Withdrawals</h3>
+<p class="text-muted">Tracks operating expenses, reimbursements, and bank withdrawals.</p>
+<TransactionList FilterType="ExpenseWithdrawal" />

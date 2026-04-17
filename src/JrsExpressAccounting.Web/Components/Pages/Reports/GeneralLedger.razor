@@ -1,0 +1,32 @@
+@page "/reports/general-ledger"
+@attribute [Authorize(Roles = "Admin,AccountingAdmin,Accounting")]
+@inject IReportService Reports
+
+<h3>General Ledger</h3>
+<div class="row g-2 mb-2">
+    <div class="col"><input class="form-control" type="date" @bind="fromDateText" /></div>
+    <div class="col"><input class="form-control" type="date" @bind="toDateText" /></div>
+    <div class="col"><button class="btn btn-danger" @onclick="Load">Filter</button></div>
+</div>
+<table class="table table-sm table-striped">
+    <thead><tr><th>Date</th><th>Ref</th><th>Account</th><th>Debit</th><th>Credit</th><th>VAT</th><th>WTax</th></tr></thead>
+    <tbody>
+        @foreach (var item in lines)
+        {
+            <tr><td>@item.Date.ToShortDateString()</td><td>@item.ReferenceNo</td><td>@item.AccountCode - @item.AccountName</td><td>@item.Debit.ToString("N2")</td><td>@item.Credit.ToString("N2")</td><td>@item.Vat.ToString("N2")</td><td>@item.Wtax.ToString("N2")</td></tr>
+        }
+    </tbody>
+</table>
+
+@code {
+    private List<GeneralLedgerLine> lines = [];
+    private string fromDateText = DateTime.UtcNow.AddMonths(-1).ToString("yyyy-MM-dd");
+    private string toDateText = DateTime.UtcNow.ToString("yyyy-MM-dd");
+
+    protected override async Task OnInitializedAsync() => await Load();
+
+    private async Task Load()
+    {
+        lines = await Reports.GetGeneralLedgerAsync(DateTime.Parse(fromDateText), DateTime.Parse(toDateText), null);
+    }
+}

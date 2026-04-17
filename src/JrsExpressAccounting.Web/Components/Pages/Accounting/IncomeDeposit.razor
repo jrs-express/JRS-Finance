@@ -1,0 +1,7 @@
+@page "/accounting/income-deposit"
+@attribute [Authorize(Roles = "Admin,AccountingAdmin,Accounting")]
+@inject JrsExpressAccounting.Web.Data.ApplicationDbContext Db
+
+<h3>Income and Bank Deposits</h3>
+<p class="text-muted">Tracks collections and deposits to bank accounts.</p>
+<TransactionList FilterType="IncomeDeposit" />

@@ -1,0 +1,5 @@
+@page "/accounting/cash-disbursements"
+@attribute [Authorize(Roles = "Admin,AccountingAdmin,Accounting")]
+
+<h3>Cash Disbursement</h3>
+<TransactionList FilterType="CashDisbursement" />
